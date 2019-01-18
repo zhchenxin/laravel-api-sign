@@ -1,0 +1,23 @@
+{
+  "name": "zhchenxin/api-sign",
+  "description": "api sign for laravel",
+  "license": "Apache",
+  "authors": [
+    {
+      "name": "zhchenxin",
+      "email": "1577838065@qq.com"
+    }
+  ],
+  "require-dev": {
+    "illuminate/support": "~5.1",
+    "illuminate/http": "~5.1",
+    "illuminate/config": "~5.1",
+    "illuminate/cache": "~5.1",
+    "phpunit/phpunit": "~4.8 || ~6.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Zhchenxin\\ApiSign\\": "src/"
+    }
+  }
+}
