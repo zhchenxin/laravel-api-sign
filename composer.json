@@ -1,7 +1,7 @@
 {
   "name": "zhchenxin/api-sign",
   "description": "api sign for laravel",
-  "license": "Apache",
+  "license": "MIT",
   "authors": [
     {
       "name": "zhchenxin",
