@@ -15,16 +15,19 @@ class ApiSignMiddleware
 {
     protected $token;
 
+    protected $api_token;
+
     protected $sign;
 
     public function __construct(ConfigContract $config, Sign $sign)
     {
         // 合同配置
-        if (!$config->has('apisign')) {
-            $config->set('apisign', require __DIR__ . '/../../config/apisign.php');
+        if (!$config->has('api_sign')) {
+            $config->set('api_sign', require __DIR__ . '/../../config/api_sign.php');
         }
 
-        $this->token = $config->get('apisign.token', '');
+        $this->token = $config->get('api_sign.token', '');
+        $this->api_token = $config->get('api_sign.api_token', '');
         $this->sign = $sign;
     }
 
@@ -36,15 +39,15 @@ class ApiSignMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
-        if ($request->isMethod('GET') || $request->isMethod('DEELTE')) {
-            $params = $request->query();
-        } else {
-            $params = $request->query();
-            if (!strpos($request->header('content-type'), 'multipart/form-data')) {
-                $params['body'] = md5($request->getContent());
+        $params = $request->all();
+        $token = $this->token;
+        if (!empty($params['source'])) {
+            if (!in_array($params['source'], array_keys($this->api_token))) {
+                throw new SignException('未知来源的请求');
             }
+            $token = $this->api_token[$params['source']];
         }
-        $this->sign->checkSign($params, $this->token);
+        $this->sign->checkSign($params, $token);
         return $next($request);
     }
 }

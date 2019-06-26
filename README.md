@@ -27,9 +27,6 @@ protected $middlewareGroups = [
 
 - stamp: 当前的时间戳
 - token: 前后端约定好的 token
-- body: 如果是 POST 请求，则需要添加此参数，数值为请求的 body 的 md5 哈希值
-
-> 如果请求的 content-type=form-data ，则不需要添加 body 参数
 
 (2) 排序
 
@@ -39,119 +36,36 @@ protected $middlewareGroups = [
 
 将 token 参数移除，然后将所有的参数发送到服务器中。
 
-下面使用 node.js
+备注:
 
-## 例子
+在非线上环境, 可以添加 _debug=1 参数来调试签名, 添加了 _debug 参数之后, 会返回
 
-通用的方法：
-
-```js
-function sortDict(dict)
-{
-    var dict2 = {},
-        keys = Object.keys(dict).sort();
-
-    for (var i = 0, n = keys.length, key; i < n; ++i) {
-        key = keys[i];
-        dict2[key] = dict[key];
-    }
-
-    return dict2;
-}
-
-function md5(str)
-{
-    return crypto.createHash('md5').update(str).digest('hex');
-}
+```
+sign string: server sign 加密的原始字符串
+client sign: 客户端传进来的签名
+server sign: 服务端的签名
 ```
 
-### GET 请求
+## 多签名模式
 
-```js
-var params = {
-    page: 1,
-    count: 10
-};
-params.stamp = parseInt(Date.now() / 1000);
-params.nonce = Math.random().toString(36).substr(2);;
-params.token = 'D8PMQ1BHYCGbvVxcScLrjRi3fbq7OkOP';
-params = sortDict(params);
-params['sign'] = md5(querystring.stringify(params));
-delete params.token;
+一个模块如果提供给多端使用, 可以给每一个端提供不同的签名, 例如ios签名是A, Android签名是B, H5签名是C, 这样来做区分, 也方便临时关闭某一个入口.
 
-console.log('请求参数：');
-console.log(params);
-axios.get('/finance/transaction?' + querystring.stringify(params))
-    .then(function (response) {
-        console.log('返回数据');
-        console.log(response.data);
-    })
-    .catch(function (error) {
-        console.log(error);
-    });
+这时, 需要将配置文件 `apisign.php` 复制到config目录下, 配置下面相关内容
+
+```
+<?php
+
+return [
+    'token' => env('URL_SIGN_TOKEN', ''),
+
+    'api_token' => [
+        'ios' => 'sm6O#^FODZqq&nG4',
+        'android' => 'ncODna0!zec8gTtS',
+        'h5' => 'MV1htlLROYLi^*sZ',
+    ],
+];
 ```
 
-### POST 请求
+同时, 在客户端签名的时候, 需要增加 source 字段来表明自己的来源.
 
-```js
-var body = {
-    mobile: '18515220153',
-    password: '123456'
-};
-var params = {
-    stamp: parseInt(Date.now() / 1000),
-    nonce: Math.random().toString(36).substr(2),
-    token: 'D8PMQ1BHYCGbvVxcScLrjRi3fbq7OkOP',
-    body: md5(JSON.stringify(body)),
-};
-params = sortDict(params);
-params['sign'] = md5(querystring.stringify(params));
-delete params.token;
-
-console.log('请求参数：');
-console.log(params);
-axios({
-    method: 'POST',
-    data: body,
-    url: '/auth/login?' + querystring.stringify(params),
-}).then(function (response) {
-    console.log('返回数据');
-    console.log(response.data);
-}).catch(function (error) {
-    console.log(error);
-});
-```
-
-### form-data
-
-```js
-var params = {
-    stamp: parseInt(Date.now() / 1000),
-    nonce: Math.random().toString(36).substr(2),
-    token: 'D8PMQ1BHYCGbvVxcScLrjRi3fbq7OkOP',
-};
-
-params = sortDict(params);
-params['sign'] = md5(querystring.stringify(params));
-delete params.token;
-
-console.log('请求参数：');
-console.log(params);
-
-var data = new FormData();
-data.append('image', 'ADD');
-
-axios({
-    method: 'POST',
-    data: data,
-    url: '/common/upload/image?' + querystring.stringify(params),
-    headers: {
-        'Content-Type': 'multipart/form-data'
-    }
-}).then(function (response) {
-    console.log('返回数据');
-    console.log(response.data);
-}).catch(function (error) {
-    console.log(error);
-});
-```
+例如, ios端 source=ios, android端 source=android, H5端 source=h5

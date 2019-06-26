@@ -6,6 +6,12 @@ use Zhchenxin\ApiSign\Exception\SignException;
 
 class Sign
 {
+    /**
+     * 给参数添加 sign, stamp
+     * @param $params
+     * @param $token
+     * @return mixed
+     */
     public function appendSign($params, $token)
     {
         if (empty($params['stamp'])) {
@@ -22,13 +28,12 @@ class Sign
     /**
      * @param $params
      * @param $token
-     * @return mixed
      * @throws SignException
      */
     public function checkSign($params, $token)
     {
         if (array_key_exists('token', $params)) {
-            throw new SignException('should not have token params');
+            throw new SignException('签名不存在');
         }
 
         $this->_checkStamp($params['stamp']);
@@ -44,7 +49,7 @@ class Sign
     {
         // 5分钟以内有效
         if (abs(time() - $stamp) > 5*60) {
-            throw new SignException('stamp error');
+            throw new SignException('请求无效');
         }
     }
 
@@ -60,17 +65,31 @@ class Sign
 
         // 增加token
         $params['token'] = $token;
-        if(strtoupper($this->_createSign($params)) != strtoupper($sign)){
-            throw new SignException('sign error');
+
+        // 如果不是线上环境, 并且有debug参数, 则打印出参数内容
+        if ('production' != env('APP_ENV') && !empty($params['_debug'])) {
+            unset($params['_debug']);
+            echo "sign string: " . $this->_getSignStr($params) . PHP_EOL;
+            echo "client sign: {$sign}" . PHP_EOL;
+            echo "server sign: " . $this->_createSign($params) . PHP_EOL;
+            die;
+        }
+
+        if($this->_getSignStr($params) != $sign){
+            throw new SignException('签名异常');
         }
     }
 
     private function _createSign($params)
     {
+        return md5($this->_getSignStr($params));
+    }
+
+    private function _getSignStr($params)
+    {
         ksort($params);
-        $sign_str = collect($params)->map(function($value, $key) {
+        return collect($params)->map(function($value, $key) {
             return "$key=$value";
         })->implode('&');
-        return md5($sign_str);
     }
 }
